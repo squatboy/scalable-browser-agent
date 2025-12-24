@@ -1,0 +1,53 @@
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  orchestrator:
+    build:
+      context: ..
+      dockerfile: services/orchestrator/Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://app:app@postgres:5432/app
+      STREAM_KEY: agent-jobs
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - postgres
+
+  worker:
+    env_file:
+      - ../.env
+    build:
+      context: ..
+      dockerfile: services/worker/Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://app:app@postgres:5432/app
+      STREAM_KEY: agent-jobs
+      CONSUMER_GROUP: workers
+      CONSUMER_NAME: worker-1
+      AGENTS_DIR: /agents
+    volumes:
+      - ../agents:/agents:ro
+    depends_on:
+      - redis
+      - postgres
+
+volumes:
+  pgdata:
