@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: postgres:16
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sba-secrets
+                  key: POSTGRES_PASSWORD
+          command:
+            - /bin/sh
+            - -lc
+            - |
+              set -euo pipefail
+              echo "Waiting for postgres..."
+              until pg_isready -h postgres -U app -d app; do sleep 1; done
+
+              echo "Creating table jobs if not exists..."
+              psql -h postgres -U app -d app <<'SQL'
+              CREATE TABLE IF NOT EXISTS jobs (
+                job_id TEXT PRIMARY KEY,
+                agent_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                payload JSONB NOT NULL,
+                result JSONB,
+                error JSONB,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                started_at TIMESTAMPTZ,
+                finished_at TIMESTAMPTZ
+              );
+
+              CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
+              CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at);
+              SQL
+
+              echo "Migration done."
