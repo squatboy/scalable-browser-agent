@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: job-gc
+  namespace: sba
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: gc
+              image: ghcr.io/squatboy/scalable-browser-agent-orchestrator:latest
+              command: ["python", "-m", "app.gc"]
+              env:
+                - name: DATABASE_URL
+                  value: "postgresql://app:app@postgres:5432/app"
+                - name: JOB_TIMEOUT_SECONDS
+                  value: "1800"
+                - name: QUEUED_EXPIRE_SECONDS
+                  value: "86400"
+                - name: RETENTION_DAYS
+                  value: "7"
