@@ -5,6 +5,7 @@ import json
 import os
 import traceback
 import redis
+import signal
 
 from .agent_loader import load_agent_module
 from .storage import update_job_running, update_job_succeeded, update_job_failed
@@ -48,6 +49,24 @@ async def run_one(agent_id: str, job_id: str, payload: dict) -> dict:
 
 
 async def main():
+    # Fail-fast: enforce single concurrency via env
+    concurrency = os.getenv("WORKER_CONCURRENCY", "1")
+    if str(concurrency) != "1":
+        raise SystemExit("WORKER_CONCURRENCY must be 1 for safe operation")
+
+    shutdown_event = asyncio.Event()
+
+    def _handle_sigterm(*_args):
+        # Stop pulling new jobs; allow in-flight job to complete
+        shutdown_event.set()
+
+    # Register graceful shutdown
+    try:
+        signal.signal(signal.SIGTERM, _handle_sigterm)
+        signal.signal(signal.SIGINT, _handle_sigterm)
+    except Exception:
+        # Some environments may not allow signal setup; continue
+        pass
     r = get_redis()
     ensure_group(r)
 
@@ -55,7 +74,7 @@ async def main():
         f"[worker] listening stream={STREAM_KEY}, group={CONSUMER_GROUP}, consumer={CONSUMER_NAME}"
     )
 
-    while True:
+    while not shutdown_event.is_set():
         resp = r.xreadgroup(
             groupname=CONSUMER_GROUP,
             consumername=CONSUMER_NAME,
