@@ -9,6 +9,8 @@ resources:
   - postgres/postgres.yaml
   - redis/redis.yaml
   - orchestrator/orchestrator.yaml
+  - orchestrator/gc-cronjob.yaml
   - worker/worker.yaml
+  - worker/worker-pdb.yaml
   - postgres/migrate.yaml
 
