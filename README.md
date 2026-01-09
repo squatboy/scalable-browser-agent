@@ -14,7 +14,7 @@ By processing **self-hosted browser-use requests** through an **Asynchronous (jo
 ### Features (MVP)
 
 * **Queue-based async execution**: The API returns a `job_id` immediately, while the actual execution is handled asynchronously by the Worker.
-* **Horizontal scalability**: Increase concurrent processing capacity by expanding Worker Deployment replicas (currently manual scaling, KEDA support planned).
+* **Horizontal scalability**: Horizontal scalability: Increase concurrent processing capacity by scaling Worker replicas automatically via KEDA (Redis Streams lag-based autoscaling)
 * **Job tracking**: Permanently store job status (QUEUED/RUNNING/SUCCEEDED/FAILED) along with results/errors (including tracebacks) in PostgreSQL.
 * **Queue consumer-group**: Ensures safe job distribution across multiple Worker instances.
 * **Kubernetes deployment**: Supports standard K8s operational workflows including rollouts, restarts, and scaling.
@@ -38,6 +38,7 @@ By processing **self-hosted browser-use requests** through an **Asynchronous (jo
 
 * A Kubernetes cluster (k3s, kind, EKS, GKE, etc., are all supported)
 * `kubectl` access
+* KEDA (installed in the cluster) for event-driven autoscaling
 
 #### **Credentials / Secrets**
 
@@ -92,7 +93,7 @@ kubectl -n sba get svc
 
 * **NodePort (Current MVP Stage)**
 * Service type: If exposed as a NodePort, you can access the API via `NODE_IP:<nodePort>` of the cluster node.
-* For external access, additional configurations such as NAT, Port Forwarding, LoadBalancer, or Ingress are required.
+* For external access, you can expose the Orchestrator via NodePort and access it as \http://<NODE_PUBLIC_IP>:<NODEPORT>` (e.g., `/docs`, `/healthz`). For production, consider Ingress + TLS + Auth.`
 
 ```bash
 kubectl -n sba get svc orchestrator
@@ -171,14 +172,13 @@ kubectl -n sba logs job/db-migrate
 ### 3) Job stuck in RUNNING
 
 * **Cause**: Site response delay / Browser execution issues / No external network access / Worker hang.
-* **Action**: Check Worker logs; introduction of timeout/reaper is recommended in future updates.
+* **Action**: Check Worker logs and GC CronJob logs. A GC CronJob enforces job timeouts (e.g., JOB_TIMEOUT_SECONDS) and marks long-running RUNNING jobs as FAILED(timeout).
 
 ## Roadmap
 
-* [ ] KEDA-based autoscaling (Automatic worker scaling based on Redis backlog)
+* [x] KEDA-based autoscaling (Automatic worker scaling based on Redis backlog)
 * [ ] Helm chart support
 * [ ] Observability: metrics / tracing / structured logs
 * [ ] Retry/backoff, timeout, cancellation, DLQ
-* [ ] Options to save result files (Screenshots/HTML dumps)
 * [ ] Ingress + TLS + Auth (production-ready access)
 * [ ] Multi-tenant / per-tenant quota / budget-aware scheduling
