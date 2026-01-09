@@ -29,6 +29,25 @@ def run_agent(req: RunAgentRequest):
     return RunAgentResponse(job_id=job_id)
 
 
+@app.post("/v1/test-agent", response_model=RunAgentResponse)
+def run_test_agent():
+    """
+    Load test endpoint that uses a mock agent (no body required).
+    Simulates a 20s-60s task.
+    """
+    job_id = str(uuid.uuid4())
+    agent_id = "mock-agent"
+    payload = {"task": "load-test", "is_test": True}
+
+    # 1) DB에 QUEUED로 저장
+    insert_job(job_id=job_id, agent_id=agent_id, payload=payload)
+
+    # 2) Redis Streams에 enqueue
+    enqueue(job_id=job_id, agent_id=agent_id, payload=payload)
+
+    return RunAgentResponse(job_id=job_id)
+
+
 @app.get("/v1/jobs/{job_id}", response_model=JobResponse)
 def read_job(job_id: str):
     row = get_job(job_id)
