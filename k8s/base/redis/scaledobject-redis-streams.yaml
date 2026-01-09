@@ -1,0 +1,22 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker-redis-streams-autoscale
+  namespace: sba
+spec:
+  scaleTargetRef:
+    name: worker
+  pollingInterval: 10
+  cooldownPeriod: 90
+  minReplicaCount: 1
+  maxReplicaCount: 6
+  triggers:
+    - type: redis-streams
+      metadata:
+        address: redis:6379
+        stream: agent-jobs
+        consumerGroup: workers
+        lagCount: "10"
+        activationLagCount: "1"
+        enableTLS: "false"
+        databaseIndex: "0"
