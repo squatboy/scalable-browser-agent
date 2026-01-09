@@ -7,6 +7,8 @@ import traceback
 import redis
 import signal
 
+import random
+
 from .agent_loader import load_agent_module
 from .storage import update_job_running, update_job_succeeded, update_job_failed
 
@@ -32,6 +34,22 @@ def ensure_group(r: redis.Redis) -> None:
 
 
 async def run_one(agent_id: str, job_id: str, payload: dict) -> dict:
+    # ---------------------------------------------------------
+    # Special case for load testing (KEDA scaling)
+    # ---------------------------------------------------------
+    if agent_id == "mock-agent":
+        delay = payload.get("delay")
+        if delay is None:
+            delay = random.uniform(20.0, 60.0)
+        print(f"[worker] [mock-agent] starting job {job_id} with {delay:.2f}s delay")
+        await asyncio.sleep(delay)
+        return {
+            "status": "success",
+            "mock": True,
+            "job_id": job_id,
+            "slept_for": delay,
+        }
+
     mod = load_agent_module(agent_id)
     if not hasattr(mod, "run"):
         raise RuntimeError(
