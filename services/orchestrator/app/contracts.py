@@ -6,10 +6,7 @@ JobStatus = Literal["QUEUED", "RUNNING", "SUCCEEDED", "FAILED"]
 
 
 class RunAgentRequest(BaseModel):
-    agent_id: str = Field(default="sample-echo", description="Which agent to run")
-    payload: Dict[str, Any] = Field(
-        default_factory=dict, description="Arbitrary JSON payload passed to agent"
-    )
+    task: str = Field(..., description="The natural language task for the agent")
 
 
 class RunAgentResponse(BaseModel):
