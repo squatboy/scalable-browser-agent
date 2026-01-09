@@ -17,12 +17,14 @@ def healthz():
 @app.post("/v1/run-agent", response_model=RunAgentResponse)
 def run_agent(req: RunAgentRequest):
     job_id = str(uuid.uuid4())
+    agent_id = "browser-use-generic"
+    payload = {"task": req.task}
 
     # 1) DB에 QUEUED로 저장
-    insert_job(job_id=job_id, agent_id=req.agent_id, payload=req.payload)
+    insert_job(job_id=job_id, agent_id=agent_id, payload=payload)
 
     # 2) Redis Streams에 enqueue
-    enqueue(job_id=job_id, agent_id=req.agent_id, payload=req.payload)
+    enqueue(job_id=job_id, agent_id=agent_id, payload=payload)
 
     return RunAgentResponse(job_id=job_id)
 
