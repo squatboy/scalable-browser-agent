@@ -8,9 +8,13 @@ import redis
 import signal
 
 import random
+import logging
 
 from .agent_loader import load_agent_module
 from .storage import update_job_running, update_job_succeeded, update_job_failed
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 STREAM_KEY = os.getenv("STREAM_KEY", "agent-jobs")
@@ -41,7 +45,11 @@ async def run_one(agent_id: str, job_id: str, payload: dict) -> dict:
         delay = payload.get("delay")
         if delay is None:
             delay = random.uniform(20.0, 60.0)
-        print(f"[worker] [mock-agent] starting job {job_id} with {delay:.2f}s delay")
+        logger.info(
+            "[worker] [mock-agent] starting job job_id=%s with %.2fs delay",
+            job_id,
+            delay,
+        )
         await asyncio.sleep(delay)
         return {
             "status": "success",
@@ -88,8 +96,11 @@ async def main():
     r = get_redis()
     ensure_group(r)
 
-    print(
-        f"[worker] listening stream={STREAM_KEY}, group={CONSUMER_GROUP}, consumer={CONSUMER_NAME}"
+    logger.info(
+        "[worker] listening stream=%s, group=%s, consumer=%s",
+        STREAM_KEY,
+        CONSUMER_GROUP,
+        CONSUMER_NAME,
     )
 
     while not shutdown_event.is_set():
@@ -119,18 +130,24 @@ async def main():
 
         try:
             update_job_running(job_id)
+            logger.info("job started job_id=%s", job_id)
+            start_time = asyncio.get_event_loop().time()
+
             result = await run_one(agent_id, job_id, payload)
+
+            duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+            logger.info("job succeeded job_id=%s duration_ms=%d", job_id, duration_ms)
+
             update_job_succeeded(job_id, result)
             r.xack(STREAM_KEY, CONSUMER_GROUP, msg_id)
-            print(f"[worker] job {job_id} SUCCEEDED")
         except Exception as e:
+            logger.error("job failed job_id=%s reason=%s", job_id, str(e))
             err = {
                 "message": str(e),
                 "traceback": traceback.format_exc(),
             }
             update_job_failed(job_id, err)
             r.xack(STREAM_KEY, CONSUMER_GROUP, msg_id)
-            print(f"[worker] job {job_id} FAILED: {e}")
 
 
 if __name__ == "__main__":
