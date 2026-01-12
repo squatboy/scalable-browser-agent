@@ -9,14 +9,14 @@ spec:
   pollingInterval: 10
   cooldownPeriod: 90
   minReplicaCount: 1
-  maxReplicaCount: 6
+  maxReplicaCount: 15
   triggers:
     - type: redis-streams
       metadata:
         address: redis:6379
         stream: agent-jobs
         consumerGroup: workers
-        lagCount: "10"
+        lagCount: "3"
         activationLagCount: "1"
         enableTLS: "false"
         databaseIndex: "0"

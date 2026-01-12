@@ -1,0 +1,65 @@
+alloy:
+  configMap:
+    content: |
+      logging {
+        level  = "info"
+        format = "logfmt"
+      }
+
+      // 1) Discover pods on the current node (DaemonSet context)
+      discovery.kubernetes "pods" {
+        role = "pod"
+
+        selectors {
+          role  = "pod"
+          field = "spec.nodeName=" + coalesce(sys.env("HOSTNAME"), constants.hostname)
+        }
+      }
+
+      // 2) Relabel metadata for better Loki indexing
+      discovery.relabel "pods" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          target_label  = "app"
+        }
+
+        rule {
+          source_labels = ["namespace", "app"]
+          separator     = "/"
+          target_label  = "job"
+        }
+      }
+
+      // 3) Tail pod logs via Kubernetes API
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pods.output
+        forward_to = [loki.write.endpoint.receiver]
+      }
+
+      // 4) Push to Loki
+      loki.write "endpoint" {
+        endpoint {
+          url       = "http://loki.logging.svc.cluster.local:3100/loki/api/v1/push"
+          tenant_id = "local"
+        }
+      }
+
+daemonset:
+  enabled: true

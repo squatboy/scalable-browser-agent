@@ -1,0 +1,17 @@
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    retentionSize: 1400MB
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+grafana:
+  service:
+    type: ClusterIP
+  persistence:
+    enabled: false

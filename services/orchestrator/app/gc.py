@@ -24,9 +24,13 @@ def run_cleanup() -> None:
                     updated_at=now()
                 WHERE status='RUNNING'
                   AND started_at < now() - INTERVAL '{JOB_TIMEOUT_SECONDS} seconds'
+                RETURNING job_id
                 """
             )
-            timed_out = cur.rowcount
+            timed_out_rows = cur.fetchall()
+            for row in timed_out_rows:
+                print(f"[gc] job timeout job_id={row[0]}")
+            timed_out = len(timed_out_rows)
 
             # Expire very old QUEUED jobs (optional policy)
             cur.execute(
@@ -38,9 +42,13 @@ def run_cleanup() -> None:
                     updated_at=now()
                 WHERE status='QUEUED'
                   AND created_at < now() - INTERVAL '{QUEUED_EXPIRE_SECONDS} seconds'
+                RETURNING job_id
                 """
             )
-            expired = cur.rowcount
+            expired_rows = cur.fetchall()
+            for row in expired_rows:
+                print(f"[gc] job expired job_id={row[0]}")
+            expired = len(expired_rows)
 
             # Delete old finished jobs
             cur.execute(
