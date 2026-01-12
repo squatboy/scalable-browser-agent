@@ -112,12 +112,7 @@ kubectl -n sba get svc orchestrator
 curl -s -X POST http://127.0.0.1:8000/v1/run-agent \
   -H "Content-Type: application/json" \
   -d '{
-    "agent_id":"browser-use-generic",
-    "payload":{
-      "task":"Go to https://news.ycombinator.com/ and return top 5 stories with title and url. Return ONLY JSON.",
-      "model":"gemini-flash-lite-latest",
-      "use_vision": true
-    }
+  "task":"Go to https://news.ycombinator.com/ and return top 5 stories."
   }'
 ```
 
@@ -178,7 +173,7 @@ kubectl -n sba logs job/db-migrate
 
 * [x] KEDA-based autoscaling (Automatic worker scaling based on Redis backlog)
 * [ ] Helm chart support
-* [ ] Observability: metrics / tracing / structured logs
+* [x] Observability: metrics / tracing / structured logs
 * [ ] Retry/backoff, timeout, cancellation, DLQ
 * [ ] Ingress + TLS + Auth (production-ready access)
 * [ ] Multi-tenant / per-tenant quota / budget-aware scheduling
