@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: redis-streams-exporter
+  namespace: monitoring
+  labels:
+    release: kps
+spec:
+  namespaceSelector:
+    matchNames:
+      - sba
+  selector:
+    matchLabels:
+      app: redis-streams-exporter
+  endpoints:
+    - port: http
+      interval: 10s
+      path: /metrics
