@@ -14,7 +14,7 @@ By processing **self-hosted browser-use requests** through an **Asynchronous (jo
 ### Features (MVP)
 
 * **Queue-based async execution**: The API returns a `job_id` immediately, while the actual execution is handled asynchronously by the Worker.
-* **Horizontal scalability**: Horizontal scalability: Increase concurrent processing capacity by scaling Worker replicas automatically via KEDA (Redis Streams lag-based autoscaling)
+* **Horizontal scalability**: Automatically scales Worker replicas via KEDA based on Redis Streams consumer group lag.
 * **Job tracking**: Permanently store job status (QUEUED/RUNNING/SUCCEEDED/FAILED) along with results/errors (including tracebacks) in PostgreSQL.
 * **Queue consumer-group**: Ensures safe job distribution across multiple Worker instances.
 * **Kubernetes deployment**: Supports standard K8s operational workflows including rollouts, restarts, and scaling.
@@ -39,6 +39,8 @@ By processing **self-hosted browser-use requests** through an **Asynchronous (jo
 * A Kubernetes cluster (k3s, kind, EKS, GKE, etc., are all supported)
 * `kubectl` access
 * KEDA (installed in the cluster) for event-driven autoscaling
+* Prometheus + Grafana (for metrics and autoscaling observability)
+* Loki + Alloy (for centralized log collection)
 
 #### **Credentials / Secrets**
 
@@ -93,7 +95,8 @@ kubectl -n sba get svc
 
 * **NodePort (Current MVP Stage)**
 * Service type: If exposed as a NodePort, you can access the API via `NODE_IP:<nodePort>` of the cluster node.
-* For external access, you can expose the Orchestrator via NodePort and access it as \http://<NODE_PUBLIC_IP>:<NODEPORT>` (e.g., `/docs`, `/healthz`). For production, consider Ingress + TLS + Auth.`
+* For external access, you can expose the Orchestrator via NodePort and access it as `http://<NODE_PUBLIC_IP>:<NODEPORT>` (e.g., `/docs`, `/healthz`). For production, consider Ingress + TLS + Auth.
+
 
 ```bash
 kubectl -n sba get svc orchestrator
@@ -167,7 +170,9 @@ kubectl -n sba logs job/db-migrate
 ### 3) Job stuck in RUNNING
 
 * **Cause**: Site response delay / Browser execution issues / No external network access / Worker hang.
-* **Action**: Check Worker logs and GC CronJob logs. A GC CronJob enforces job timeouts (e.g., JOB_TIMEOUT_SECONDS) and marks long-running RUNNING jobs as FAILED(timeout).
+* **Action**: Check Worker logs and GC CronJob logs.  
+  A GC CronJob periodically enforces job timeouts (e.g., `JOB_TIMEOUT_SECONDS`), expires stale QUEUED jobs, and cleans up old finished jobs based on retention policy.
+
 
 ## Roadmap
 
