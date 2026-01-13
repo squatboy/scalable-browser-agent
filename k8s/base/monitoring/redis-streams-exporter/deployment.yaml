@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-streams-exporter
+  namespace: sba
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-streams-exporter
+  template:
+    metadata:
+      labels:
+        app: redis-streams-exporter
+    spec:
+      containers:
+      - name: exporter
+        image: python:3.11-slim
+        env:
+        - name: STREAM
+          value: "agent-jobs"
+        - name: GROUP
+          value: "workers"
+        - name: REDIS_HOST
+          value: "redis.sba.svc.cluster.local"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_DB
+          value: "0"
+        ports:
+        - name: http
+          containerPort: 8000
+        volumeMounts:
+        - name: code
+          mountPath: /app
+        workingDir: /app
+        command: ["bash","-lc"]
+        args:
+          - |
+            set -e
+            apt-get update >/dev/null
+            apt-get install -y --no-install-recommends redis-tools >/dev/null
+            python /app/exporter.py
+      volumes:
+      - name: code
+        configMap:
+          name: redis-streams-exporter
