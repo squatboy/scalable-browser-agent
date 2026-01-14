@@ -8,12 +8,12 @@ spec:
     name: worker
   pollingInterval: 10
   cooldownPeriod: 90
-  minReplicaCount: 1
-  maxReplicaCount: 15
+  minReplicaCount: 2
+  maxReplicaCount: 50
   triggers:
     - type: redis-streams
       metadata:
-        address: redis:6379
+        address: redis.sba.svc.cluster.local:6379
         stream: agent-jobs
         consumerGroup: workers
         lagCount: "3"
