@@ -24,11 +24,11 @@ spec:
           image: ghcr.io/squatboy/scalable-browser-agent-worker:latest
           resources:
             requests:
-              cpu: "300m"
-              memory: "768Mi"
+              cpu: "200m"
+              memory: "640Mi"
             limits:
-              cpu: "1000m"
-              memory: "2Gi"
+              cpu: "500m"
+              memory: "1Gi"
           env:
             - name: DATABASE_URL
               value: "postgresql://app:app@postgres:5432/app"
