@@ -20,6 +20,8 @@ By processing **self-hosted browser-use requests** through an **Asynchronous (jo
 * **Kubernetes deployment**: Supports standard K8s operational workflows including rollouts, restarts, and scaling.
 
 ## Architecture
+
+<img width="1706" height="928" alt="architecture" src="https://github.com/user-attachments/assets/71bd7b63-b9e5-4f21-89d0-e9f76c12cf9a" />
 <img width="2086" height="678" alt="image" src="https://github.com/user-attachments/assets/287e2a59-7d5c-46b8-b053-10ce9cf09ab3" />
 
 
@@ -37,15 +39,53 @@ By processing **self-hosted browser-use requests** through an **Asynchronous (jo
 #### **Kubernetes**
 
 * A Kubernetes cluster (k3s, kind, EKS, GKE, etc., are all supported)
-* `kubectl` access
-* KEDA (installed in the cluster) for event-driven autoscaling
-* Prometheus + Grafana (for metrics and autoscaling observability)
-* Loki + Alloy (for centralized log collection)
+* `kubectl` CLI installed and configured
+* `helm` CLI (v3+) for installing dependencies
+
+#### **Required Dependencies**
+
+Install the following components before deploying the application:
+
+**KEDA (Kubernetes Event-driven Autoscaling)**
+
+KEDA is required for automatic worker scaling based on Redis Streams queue lag.
+
+```bash
+helm repo add kedacore https://kedacore.github.io/charts
+helm repo update
+helm install keda kedacore/keda --namespace keda --create-namespace
+```
+
+#### **Optional Dependencies**
+
+These components enhance observability but are not required for basic operation:
+
+**Prometheus + Grafana (Metrics & Observability)**
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install kube-prometheus prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace \
+  -f k8s/base/monitoring/monitoring-values.yaml
+```
+
+**Loki + Alloy (Centralized Logging)**
+
+```bash
+helm repo add grafana https://grafana.github.io/helm-charts
+helm install loki grafana/loki \
+  --namespace logging --create-namespace \
+  -f k8s/base/logging/loki-values.yaml
+helm install alloy grafana/alloy \
+  --namespace logging \
+  -f k8s/base/logging/alloy-values.yaml
+```
 
 #### **Credentials / Secrets**
 
 * LLM Provider API Key (e.g., `GOOGLE_API_KEY` for Google Gemini)
-* (Recommended) Inject via Secrets/Environment Variables
+* PostgreSQL password
+* (Recommended) Inject via Kubernetes Secrets
 
 > **Note**: The Worker runs Playwright Chromium in headless mode. The Worker image must include the necessary dependencies for running a browser within the cluster.
 
