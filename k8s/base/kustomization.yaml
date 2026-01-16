@@ -4,15 +4,10 @@ kind: Kustomization
 namespace: sba
 
 resources:
-  - namespace.yaml
   - secret.yaml
-  - postgres/postgres.yaml
-  - postgres/migrate.yaml
-  - redis/redis.yaml
-  - redis/scaledobject-redis-streams.yaml
-  - orchestrator/orchestrator.yaml
-  - orchestrator/gc-cronjob.yaml
-  - worker/worker.yaml
-  - worker/worker-pdb.yaml
+  - postgres
+  - redis
+  - orchestrator
+  - worker
   - monitoring/redis-streams-exporter 
 
