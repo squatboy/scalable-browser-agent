@@ -1,17 +1,17 @@
 # Scalable Browser Agent
 
 ![](https://img.shields.io/badge/-BrowserUse-black?style=flat&logo=github)
-![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat&logo=python)
+![k8s](https://img.shields.io/badge/k8s-1.33.6-blue?style=flat&logo=kubernetes)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115.6-success?style=flat&logo=fastapi)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?style=flat&logo=postgresql)
 ![Redis](https://img.shields.io/badge/Redis-7-red?style=flat&logo=redis)
 
 
-This platform is designed to deploy and operate a scalable **queue-based browser agent (browser-use)** execution environment on Kubernetes. 
+This platform is designed to deploy and operate a scalable **queue-based browser agent (ex.  [`browser-use`](https://github.com/browser-use/browser-use), [`skyvern`](https://github.com/Skyvern-AI/skyvern), etc.)** execution environment on Kubernetes. 
 
 By processing **self-hosted browser-use requests** through an **Asynchronous (job) + Queue (queue) + Worker (worker)** architecture, it minimizes operational issues such as **concurrent request spikes**, **long-running executions**, **failure tracking**, and **horizontal scaling** with a minimal configuration.
 
-### Features (MVP)
+### Features
 
 * **Queue-based async execution**: The API returns a `job_id` immediately, while the actual execution is handled asynchronously by the Worker.
 * **Horizontal scalability**: Automatically scales Worker replicas via KEDA based on Redis Streams consumer group lag.
@@ -33,6 +33,15 @@ By processing **self-hosted browser-use requests** through an **Asynchronous (jo
 * **Database**: PostgreSQL (Stores job status/result/error)
 
 > **Goal**: "Queue agent requests → Process safely via Workers → Provide results/status in a searchable format."
+
+## Project Structure
+
+* **`agents/`**: Contains browser agent scripts. This project currently uses [browser-use](https://github.com/browser-use/browser-use). If you want to use other library-based agents (e.g., **Skyvern**), you can replace the script in this directory.
+* **`services/`**: Source code for the system's core components.
+    * **`orchestrator/`**: API server that receives requests and manages the job queue.
+    * **`worker/`**: Asynchronous worker that pulls jobs from Redis and executes them.
+* **`deploy/`**: Local development and deployment configurations (e.g., Docker Compose).
+* **`k8s/base/`**: Kubernetes manifests for various components including the Orchestrator, Worker, Postgres, Redis, and observability stack.
 
 ## Prerequisites
 
